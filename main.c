@@ -2,6 +2,41 @@
 #include <stdio.h>
 #include <math.h>
 
+int AnimationHandling(float dt, int currentFrameX, int *currentFrameY, float frameTime, int moving, int grounded, int gameState)
+{
+    static float frameTimer = 0;
+    static int numFrames=0;
+    
+    if(moving!=0 && grounded==1){
+        numFrames = 8;
+        *currentFrameY = 0;
+    }
+    else if(moving==0 && grounded==1){
+        numFrames = 5;
+        *currentFrameY = 1;
+    }
+    else{
+        numFrames=5;
+        *currentFrameY=2;
+    }
+    
+    if(gameState==0)
+    {
+        frameTimer += dt;
+        if(frameTimer>=frameTime)
+        {
+            frameTimer = 0;
+            currentFrameX++;
+            
+            if(currentFrameX>=numFrames)
+            {
+                currentFrameX=0;
+            }
+        }
+    }
+    return currentFrameX;
+}
+
 void LoadScore(int scores[])
 {
     int i;
@@ -116,7 +151,7 @@ int main()
     //duck properties
     Vector2 duckPos = {0.0f, 200.0f}, duckOrigin = {0.0f, 0.0f};
     float gravity= 1750.0f, jumpStrength= -700.0f, velocityY= 0.0f, duckSpeed=250.0f, spriteScale=7.75;
-    int directionX= 0, spriteDimensions=124, facing=1;
+    int directionX= 0, spriteDimensions=124, facing=1, isGrounded=0;
     int duckboxSize= spriteDimensions/2;
     
     //hunter properties
@@ -128,7 +163,7 @@ int main()
     SetExitKey(KEY_ESCAPE);
     
     //texture assignment
-    duck = LoadTexture("sprites/duck.png");
+    duck = LoadTexture("sprites/duck_animations.png");
     hunter = LoadTexture("sprites/crosshair.png");
     //sound assignment
     shooting= LoadSound("audio/explosion.wav");
@@ -141,6 +176,10 @@ int main()
     int highScores[5];
     LoadScore(highScores);
     
+    //animation handling
+    const float frameTime = 0.12f;
+    int frameWidth = 16, frameHeight = 16, currentFrameX = 0, currentFrameY = 0;
+    
     while(!WindowShouldClose())
     {
         float dt = GetFrameTime();
@@ -150,7 +189,9 @@ int main()
         float centerX= hunterPos.x+hunterDimensions/2, centerY= hunterPos.y+hunterDimensions/2;
         
         //Rectangles 
-        Rectangle src= {0, 0, duck.width * facing, duck.height};//for flipping the sprite
+        currentFrameX = AnimationHandling(dt, currentFrameX, &currentFrameY, frameTime, directionX, isGrounded, gameOver);
+      
+        Rectangle src= {16 * currentFrameX, 16 * currentFrameY, frameWidth * facing, frameHeight};//for flipping the sprite
         Rectangle dest= {duckPos.x, duckPos.y, spriteDimensions, spriteDimensions};//for sprite display ONLY
         Rectangle duckBox= {duckCenterX - duckboxSize/2, duckCenterY - duckboxSize/2, duckboxSize, duckboxSize};//for collisions 
         Rectangle hunterCollision = {centerX - hitboxSize/2, centerY - hitboxSize/2, hitboxSize, hitboxSize};
@@ -190,12 +231,14 @@ int main()
             if (duckPos.y > windowHeight-spriteDimensions) {
                 duckPos.y = windowHeight-spriteDimensions;
                 velocityY = 0;
+                isGrounded=1;
             }
 
             //jump
             if (IsKeyPressed(KEY_UP) && duckPos.y <= windowHeight-spriteDimensions && duckPos.y >= 0){
                 velocityY = jumpStrength;
                 PlaySound(jumping);
+                isGrounded=0;
             }
         }
         else if(gameOver==1 && postDeathTimer<1.5){
