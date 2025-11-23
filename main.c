@@ -2,41 +2,103 @@
 #include <stdio.h>
 #include <math.h>
 
-void hunterFollowDuck(Vector2 duck, Vector2 *hunter, float *followSpeed, float dt, int *canShoot)
+void LoadScore(int scores[])
+{
+    int i;
+    FILE *scoreFile = fopen("scores.txt", "r");
+    
+    if(scoreFile==NULL)
+    {
+        for(i=0; i<5; i++)
+        {
+            scores[i]=0;
+        }
+        
+        //create file as file currently doesn't exist
+        scoreFile = fopen("scores.txt", "w");
+        for(i=0; i<5; i++)
+        {
+            fprintf(scoreFile, "%d\n", scores[i]);
+        }
+        fclose(scoreFile);
+        return;
+    }
+    
+    for(i=0; i<5; i++)
+    {
+        fscanf(scoreFile, "%d", &scores[i]);
+    }
+    fclose(scoreFile);
+}
+
+void AddScore(int scores[], int currentScore)
+{
+    int i, j;
+    
+    for(i = 0; i < 5; i++)
+    {
+        if(currentScore > scores[i])
+        {
+            for(j = 4; j > i; j--)
+            {
+                scores[j] = scores[j-1];
+            }
+            scores[i] = currentScore;
+            
+            FILE *scoreFile = fopen("scores.txt", "w");
+            if(scoreFile != NULL)
+            {
+                for(j = 0; j < 5; j++)
+                {
+                    fprintf(scoreFile, "%d\n", scores[j]);
+                }
+                fclose(scoreFile);
+            }
+
+            return; 
+        }
+    }
+}
+
+
+void hunterFollowDuck(Vector2 duck, Vector2 *hunter, float *followSpeed, float dt, int *canShoot, Sound shoot, int gameState, int *score)
 {
     const float shootCooldown= 0.5f, trackTime=2.5f;
     static float timer=0, cooldown=0;
-    
-    if(timer<trackTime)
+    if(gameState==0)
     {
-        Vector2 directionToDuck = {duck.x - hunter->x, duck.y - hunter->y};
-        float distance = sqrt(directionToDuck.x*directionToDuck.x + directionToDuck.y*directionToDuck.y);
-        
-        if(distance != 0){
-            directionToDuck.x /= distance;
-            directionToDuck.y /= distance;
-        }
-        
-        hunter->x += directionToDuck.x * (*followSpeed) * dt;
-        hunter->y += directionToDuck.y * (*followSpeed) * dt;
-        
-        timer += dt;
-    }
-    else{
-        if(cooldown<shootCooldown){
-            if(*canShoot==0){
-                *canShoot=1;
-            } 
-            cooldown += dt;
+        if(timer<trackTime)
+        {
+            Vector2 directionToDuck = {duck.x - hunter->x, duck.y - hunter->y};
+            float distance = sqrt(directionToDuck.x*directionToDuck.x + directionToDuck.y*directionToDuck.y);
+            
+            if(distance != 0){
+                directionToDuck.x /= distance;
+                directionToDuck.y /= distance;
+            }
+            
+            hunter->x += directionToDuck.x * (*followSpeed) * dt;
+            hunter->y += directionToDuck.y * (*followSpeed) * dt;
+            
+            timer += dt;
         }
         else{
-            timer=0;
-            cooldown=0;
-            *canShoot=0;
-            *followSpeed+= 20;
+            if(cooldown<shootCooldown){
+                if(*canShoot==0){
+                    PlaySound(shoot);
+                    *canShoot=1;
+                } 
+                cooldown += dt;
+            }
+            else{
+                timer=0;
+                cooldown=0;
+                *canShoot=0;
+                *score+= 1;
+                *followSpeed+= 20;
+            }
         }
     }
-    
 }
 
 int main()
@@ -44,7 +106,11 @@ int main()
     //window properties and texture loading
     int windowLength= 1024, windowHeight= 800;
     Texture2D duck, hunter;
+    Sound shooting, jumping, hurt;
+    
     Color bgColour = {179, 230, 255, 255};
+    
+    InitAudioDevice();
     InitWindow(windowLength, windowHeight, "Reverse Duck Hunt");
     
     //duck properties
@@ -61,13 +127,19 @@ int main()
     
     SetExitKey(KEY_ESCAPE);
     
-    duck = LoadTexture("duck.png");
-    hunter = LoadTexture("crosshair.png");
+    //texture assignment
+    duck = LoadTexture("sprites/duck.png");
+    hunter = LoadTexture("sprites/crosshair.png");
+    //sound assignment
+    shooting= LoadSound("audio/explosion.wav");
+    jumping= LoadSound("audio/jump.wav");
+    hurt= LoadSound("audio/hitHurt.wav");
     
-    
-    int gameOver= 0;
+    //game states and scores
+    int gameOver= 0, score=0;
     float postDeathTimer=0.0f;
-
+    int highScores[5];
+    LoadScore(highScores);
     
     while(!WindowShouldClose())
     {
@@ -84,10 +156,11 @@ int main()
         Rectangle hunterCollision = {centerX - hitboxSize/2, centerY - hitboxSize/2, hitboxSize, hitboxSize};
         
         //hunter logic
-        hunterFollowDuck(duckPos, &hunterPos, &followSpeed, dt, &canShoot);
+        hunterFollowDuck(duckPos, &hunterPos, &followSpeed, dt, &canShoot, shooting, gameOver, &score);
         
         if(CheckCollisionRecs(duckBox, hunterCollision) && canShoot==1 && gameOver==0){
             gameOver=1;
+            PlaySound(hurt);
         }
         
         if(gameOver==0)
@@ -120,12 +193,17 @@ int main()
             }
 
             //jump
-            if (IsKeyPressed(KEY_UP) && duckPos.y <= windowHeight-spriteDimensions && duckPos.y >= 0) {
+            if (IsKeyPressed(KEY_UP) && duckPos.y <= windowHeight-spriteDimensions && duckPos.y >= 0){
                 velocityY = jumpStrength;
+                PlaySound(jumping);
             }
         }
-        else if(gameOver==1 && postDeathTimer<1){
-            followSpeed = 0;
+        else if(gameOver==1 && postDeathTimer<1.5){
+            if(followSpeed!=0){
+                followSpeed = 0;
+                AddScore(highScores, score);
+            }
+            
             postDeathTimer+= dt;
         }
         
@@ -134,15 +212,14 @@ int main()
         BeginDrawing();//put all things that need to be shown on the screen in here
             ClearBackground(bgColour);
             
-            if(gameOver==0 || postDeathTimer<1)
+            if(gameOver==0 || postDeathTimer<1.5)
             {
                 DrawTexturePro(duck, src, dest, duckOrigin,0.0f, WHITE);
                 DrawTextureEx(hunter, hunterPos, 0.0f, hunterScale, WHITE);
-                //DrawRectangleRec(duckBox, BLUE);
+                DrawText(TextFormat("Score: %d", score), 10, 10, 30, DARKGRAY);
                 if(canShoot==1){
                   DrawRectangleRec(hunterCollision, RED);  
                 }
-                //DrawRectangleRec(hunterCollision, RED);    //hitbox visualization
             }
             else
             {
@@ -152,5 +229,9 @@ int main()
         EndDrawing();
     }
     
+    CloseAudioDevice();
+    CloseWindow();
+    
     return 0;
 }
+ 
