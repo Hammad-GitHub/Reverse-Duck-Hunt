@@ -120,7 +120,7 @@ int main()
     int duckboxSize= spriteDimensions/2;
     
     //hunter properties
-    Vector2 hunterPos= {530.0f, 450.0f};
+    Vector2 hunterPos= {530.0f, 350.0f};
     float hunterScale= 9.25f, followSpeed=150.0f;
     int hunterDimensions= 148, canShoot=0;
     int hitboxSize = hunterDimensions/3.5;
@@ -223,8 +223,18 @@ int main()
             }
             else
             {
-                DrawText("GAME OVER!", windowLength/2 - 120, windowHeight/2 - 40, 40, RED);
-                DrawText("Press ESC to quit", windowLength/2 - 100, windowHeight/2 + 50, 20, DARKGRAY);
+                int scoreSpacing = 30, numScores = 5, startY = windowHeight/2 - 35; 
+
+                // draw top 5 high scores
+                DrawText("GAME OVER!", windowLength/2 - 160, windowHeight/2 - 130, 40, RED);
+                DrawText("HIGH SCORES:", windowLength/2 - 130, startY - 40, 25, DARKGRAY);
+
+                for(int i=0; i<numScores; i++)
+                {
+                    DrawText(TextFormat("%d", highScores[i]), windowLength/2 - 50, startY + i * scoreSpacing, 20, DARKBLUE);
+                }
+                
+                DrawText("Press ESC to quit", windowLength/2 - 135,  startY + numScores * scoreSpacing + 10,  20, DARKGRAY);
             }
         EndDrawing();
     }
