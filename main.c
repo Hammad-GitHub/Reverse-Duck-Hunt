@@ -33,7 +33,9 @@ int AnimationHandling(float dt, int currentFrameX, int *currentFrameY, float fra
             frameTimer -= frameTime;
             currentFrameX++;
 
-            if(currentFrameX >= numFrames) currentFrameX = 0;
+            if(currentFrameX >= numFrames){
+                currentFrameX = 0;  
+            } 
         }
     }
     
@@ -144,7 +146,7 @@ int main()
 {
     //window properties and texture loading
     int windowLength= 1024, windowHeight= 800;
-    Texture2D duck, hunter;
+    Texture2D duck, hunter, backdrop, scoreBg;
     Sound shooting, jumping, hurt;
     
     Color bgColour = {179, 230, 255, 255};
@@ -169,6 +171,10 @@ int main()
     //texture assignment
     duck = LoadTexture("sprites/duck_animations.png");
     hunter = LoadTexture("sprites/crosshair.png");
+    backdrop = LoadTexture("sprites/bg.png");
+    scoreBg = LoadTexture("sprites/score_bg.png");
+    int bgX = (windowLength - scoreBg.width)/2, bgY = (windowHeight - scoreBg.height)/2;
+    
     //sound assignment
     shooting= LoadSound("audio/explosion.wav");
     jumping= LoadSound("audio/jump.wav");
@@ -232,8 +238,8 @@ int main()
             duckPos.y += velocityY * dt;
 
             //ground check
-            if (duckPos.y > windowHeight-spriteDimensions) {
-                duckPos.y = windowHeight-spriteDimensions;
+            if (duckPos.y > windowHeight-spriteDimensions-45){
+                duckPos.y = windowHeight-spriteDimensions-45;
                 velocityY = 0;
                 isGrounded=1;
             }
@@ -258,6 +264,7 @@ int main()
         
         BeginDrawing();//put all things that need to be shown on the screen in here
             ClearBackground(bgColour);
+            DrawTexture(backdrop, 0, 0, WHITE);
             
             if(gameOver==0 || postDeathTimer<1.5)
             {
@@ -273,15 +280,18 @@ int main()
                 int scoreSpacing = 30, numScores = 5, startY = windowHeight/2 - 35; 
 
                 // draw top 5 high scores
+                
+                
+                DrawTexture(scoreBg, bgX-37, bgY+10, WHITE);
                 DrawText("GAME OVER!", windowLength/2 - 160, windowHeight/2 - 130, 40, RED);
-                DrawText("HIGH SCORES:", windowLength/2 - 130, startY - 40, 25, DARKGRAY);
+                DrawText("HIGH SCORES:", windowLength/2 - 130, startY - 40, 25, WHITE);
 
                 for(int i=0; i<numScores; i++)
                 {
-                    DrawText(TextFormat("%d", highScores[i]), windowLength/2 - 50, startY + i * scoreSpacing, 20, DARKBLUE);
+                    DrawText(TextFormat("%d", highScores[i]), windowLength/2 - 50, startY + i * scoreSpacing, 20, WHITE);
                 }
                 
-                DrawText("Press ESC to quit", windowLength/2 - 135,  startY + numScores * scoreSpacing + 10,  20, DARKGRAY);
+                DrawText("Press ESC to quit", windowLength/2 - 135,  startY + numScores * scoreSpacing + 10,  20, WHITE);
             }
         EndDrawing();
     }
