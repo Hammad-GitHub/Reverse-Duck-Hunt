@@ -5,37 +5,41 @@
 int AnimationHandling(float dt, int currentFrameX, int *currentFrameY, float frameTime, int moving, int grounded, int gameState)
 {
     static float frameTimer = 0;
-    static int numFrames=0;
+    static int prevAnim = -1;
+    int numFrames;
     
-    if(moving!=0 && grounded==1){
+    if(moving != 0 && grounded == 1){
         numFrames = 8;
         *currentFrameY = 0;
     }
-    else if(moving==0 && grounded==1){
+    else if(moving == 0 && grounded == 1){
         numFrames = 5;
         *currentFrameY = 1;
     }
     else{
-        numFrames=5;
-        *currentFrameY=2;
+        numFrames = 5;
+        *currentFrameY = 2;
     }
     
-    if(gameState==0)
-    {
+    if(*currentFrameY != prevAnim){
+        currentFrameX = 0;
+        frameTimer = 0;
+        prevAnim = *currentFrameY;
+    }
+    
+    if(gameState == 0){
         frameTimer += dt;
-        if(frameTimer>=frameTime)
-        {
-            frameTimer = 0;
+        while(frameTimer >= frameTime){
+            frameTimer -= frameTime;
             currentFrameX++;
-            
-            if(currentFrameX>=numFrames)
-            {
-                currentFrameX=0;
-            }
+
+            if(currentFrameX >= numFrames) currentFrameX = 0;
         }
     }
+    
     return currentFrameX;
 }
+
 
 void LoadScore(int scores[])
 {
@@ -155,7 +159,7 @@ int main()
     int duckboxSize= spriteDimensions/2;
     
     //hunter properties
-    Vector2 hunterPos= {530.0f, 350.0f};
+    Vector2 hunterPos= {830.0f, 350.0f};
     float hunterScale= 9.25f, followSpeed=150.0f;
     int hunterDimensions= 148, canShoot=0;
     int hitboxSize = hunterDimensions/3.5;
